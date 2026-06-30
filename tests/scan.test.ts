@@ -17,6 +17,16 @@ import {
   type VueScanRenderEvent
 } from '../src'
 
+/**
+ * These tests mount real Vue apps in jsdom instead of mocking Vue lifecycle
+ * hooks. That gives the scanner the same `beforeMount`, `mounted`,
+ * `beforeUpdate`, and `updated` calls it receives in a browser app.
+ *
+ * The fixture has one root component and one child whose prop changes when the
+ * test calls `increment()`. Vue updates the child, vue-render-scan observes the
+ * update through its global mixin, and each test asserts against the public
+ * scanner APIs: render callbacks, stats, reports, filters, and listeners.
+ */
 interface MountedFixture {
   app: VueApp<Element>
   container: HTMLDivElement
@@ -27,6 +37,9 @@ interface MountedFixture {
 const mountedFixtures: MountedFixture[] = []
 
 afterEach(() => {
+  // Each test creates a fresh Vue app because scan() registers global app
+  // state. Stop the scanner and unmount the app so events cannot leak between
+  // tests through the active handle or DOM overlay.
   for (const fixture of mountedFixtures.splice(0)) {
     fixture.app.unmount()
     fixture.handle.stop()
@@ -49,6 +62,8 @@ describe('scan', () => {
 
     await nextTick()
 
+    // Mount events are disabled in this test, so the scanner should stay quiet
+    // until a reactive update actually causes TrackedChild to rerender.
     expect(events).toHaveLength(0)
 
     await fixture.increment()
@@ -131,6 +146,8 @@ describe('scan', () => {
 
     await fixture.increment()
 
+    // The root fixture can still update, but TrackedChild must be excluded from
+    // both callback events and report entries while the ignore filter is active.
     expect(events.some((event) => event.componentName === 'TrackedChild')).toBe(false)
     expect(
       fixture.handle.getReport().some((entry) => entry.componentName === 'TrackedChild')
@@ -182,6 +199,9 @@ describe('scan', () => {
 function mountFixture(options: VueScanOptions = {}): MountedFixture {
   const count = shallowRef(0)
 
+  // This is the component every positive assertion tracks. Its only reactive
+  // input is the `count` prop from RootFixture, so `increment()` gives the
+  // scanner a deterministic child-component update to observe.
   const TrackedChild = defineComponent({
     name: 'TrackedChild',
     props: {
@@ -221,6 +241,8 @@ function mountFixture(options: VueScanOptions = {}): MountedFixture {
   const container = document.createElement('div')
   document.body.appendChild(container)
 
+  // scan() must run before mount in real apps and in tests; otherwise the
+  // global lifecycle mixin would miss the initial mount/update wiring.
   const app = createApp(RootFixture)
   const handle = scan(app, options)
   const root = app.mount(container) as unknown as { increment: () => void }
@@ -231,6 +253,8 @@ function mountFixture(options: VueScanOptions = {}): MountedFixture {
     handle,
     increment: async () => {
       root.increment()
+      // The first tick lets Vue flush the component update. The second tick lets
+      // vue-render-scan flush its own `nextTick()` overlay/report bookkeeping.
       await nextTick()
       await nextTick()
     }

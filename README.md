@@ -67,12 +67,28 @@ npm run build
 
 The test suite mounts real Vue apps in jsdom and verifies that component updates emit redraw events, respect filters, and update reports.
 
+See [docs/development.md](docs/development.md) for the test fixture design, manual playground checks, and release flow.
+
 ## Releases
 
-Releases are driven by git tags. Update `package.json` and `CHANGELOG.md`, then push a matching tag:
+Releases are driven by git tags. Before tagging, update the changelog and bump the npm version locally:
 
 ```sh
+# 1. Document the release manually.
+$EDITOR CHANGELOG.md
+
+# 2. Bump package.json and package-lock.json without creating a tag yet.
+npm version patch --no-git-tag-version
+
+# 3. Commit the changelog and version bump.
+git add package.json package-lock.json CHANGELOG.md
+git commit -m "chore(release): v0.1.1"
+
+# 4. Tag the release commit with the exact package version.
 git tag v0.1.1
+
+# 5. Push the commit and tag.
+git push origin main
 git push origin main --tags
 ```
 
