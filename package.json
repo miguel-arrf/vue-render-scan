@@ -4,6 +4,25 @@
   "description": "Visualize Vue component rerenders in development.",
   "type": "module",
   "license": "MIT",
+  "author": "Miguel Ferreira",
+  "homepage": "https://github.com/miguel-arrf/vue-render-scan#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miguel-arrf/vue-render-scan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/miguel-arrf/vue-render-scan/issues"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "nuxt",
+    "render",
+    "rerender",
+    "performance",
+    "debugging",
+    "devtools"
+  ],
   "sideEffects": false,
   "exports": {
     ".": {
@@ -17,7 +36,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",

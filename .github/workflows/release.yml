@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish npm and GitHub release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package version
+        run: |
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PACKAGE_VERSION"
+            exit 1
+          fi
+
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --provenance
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PACKAGE_URL="https://www.npmjs.com/package/vue-render-scan/v/${VERSION}"
+          TARBALL_URL="https://registry.npmjs.org/vue-render-scan/-/vue-render-scan-${VERSION}.tgz"
+
+          cat > release-notes.md <<EOF
+          Published npm package: ${PACKAGE_URL}
+
+          Tarball: ${TARBALL_URL}
+
+          ## Install
+
+          \`\`\`sh
+          npm install -D vue-render-scan@${VERSION}
+          \`\`\`
+          EOF
+
+          gh release create "$GITHUB_REF_NAME" \
+            --title "vue-render-scan ${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            --verify-tag \
+          || gh release edit "$GITHUB_REF_NAME" \
+            --title "vue-render-scan ${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md

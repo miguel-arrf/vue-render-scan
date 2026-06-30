@@ -67,6 +67,19 @@ npm run build
 
 The test suite mounts real Vue apps in jsdom and verifies that component updates emit redraw events, respect filters, and update reports.
 
+## Releases
+
+Releases are driven by git tags. Update `package.json` and `CHANGELOG.md`, then push a matching tag:
+
+```sh
+git tag v0.1.1
+git push origin main --tags
+```
+
+The release workflow verifies the tag matches the package version, runs tests, publishes to npm with provenance, and creates the GitHub release.
+
+Before the first automated release, configure npm trusted publishing for this package with repository `miguel-arrf/vue-render-scan` and workflow `.github/workflows/release.yml`.
+
 ## Options
 
 | Option | Default | Description |
